@@ -1,135 +1,218 @@
 console.log('Add validation!')
 
 // class Form {
-//     constructor(carField, dateField, cvvField, daysField, nameField, expirationField, ccField)
-//     this.carField = carField
-//     this.dateField = dateField
-//     this.cvvField = cvvField
-//     this.daysField = daysField
-//     this.nameField = nameField
-//     this.expirationField = expirationField
-//     this.ccField = ccField
+//     constructor(fields, validate) {
+
+//     }
+
+
+
+//     const errorMsg = document.createElement('p')
+//     errorMsg.classlist.add("input-hint", "text-danger", "error-message")
 // }
 
 
+class Validation {
+    constructor(test, errorMsg) {
+        this.test = test
+        this.errorMsg = errorMsg
+    }
 
-// function markInvalid(field, error) {
-//     // const formContainer = field.parentNode
-//     field.classList.add('input-invalid')
-//     field.classList.remove('input-valid')
+    runValidation(value) {
+        return this.test(value)
+    }
+
+}
+
 
 
 class Field {
-    constructor(input) {
-        this.input = input;
+    constructor(inputDiv, validations) {
+        this.inputDiv = inputDiv
+        this.validations = validations || []
+        this.id = inputDiv.id.value
     }
-    fieldEmpty() {
-        return this.input !== ""
-    }
-    isNumber() {
-        return !isNaN(this.input)
-    }
-    isThreeNumbers() {
-        return this.input.length === 3
-    }
-    isBetween() {
-        return this.input >= 1 && this.input <= 30
-    }
-    isDateInFuture() {
-        let today = Date.now()
-        let parkingDate = new Date(this.input)
-        if (today < parkingDate) {
-            return true;
-        } else {
-            return false;
+
+    removeErrorMsgs() {
+        for (let msg of this.inputDiv.parentNode.querySelectorAll('.error-message')) {
+            msg.remove()
         }
     }
-    validateCardNumber() {
-        // console.log(this.input.value)
-        let number = parseInt(this.input.value, 10)
-            // console.log(number)
-        var regex = new RegExp("^[0-9]{16}$");
-        if (!regex.test(number))
-            return false;
-
-        return this.luhnCheck(number);
+    markValid() {
+        this.removeErrorMsgs()
+        this.inputDiv.parentNode.classList.remove("input-invalid")
+        this.inputDiv.parentNode.classList.add("input-valid")
     }
 
-    luhnCheck(val) {
-        var sum = 0;
-        for (var i = 0; i < val.length; i++) {
-            var intVal = parseInt(val.substr(i, 1));
-            if (i % 2 == 0) {
-                intVal *= 2;
-                if (intVal > 9) {
-                    intVal = 1 + (intVal % 10);
-                }
+    markInvalid(error_message) {
+        this.removeErrorMsgs()
+        this.inputDiv.parentNode.classList.add("input-invalid")
+        this.inputDiv.parentNode.classList.remove("input-valid")
+
+        const errorMsg = document.createElement('p')
+        errorMsg.classList.add('input-hint', 'text-danger', 'error-message')
+        errorMsg.innerText = error_message
+        this.inputDiv.parentNode.appendChild(errorMsg)
+    }
+
+    getDivValue() {
+        const value = this.inputDiv.value
+        return value
+    }
+
+    validate() {
+        const value = this.getDivValue()
+
+        for (let validation of this.validations) {
+            if (true !== validation(value)) {
+                let error_message = validation(value)
+                this.markInvalid(error_message)
+                break
+            } else {
+                console.log('marking valid')
+                this.markValid()
             }
-            sum += intVal;
         }
-        return (sum % 10) == 0;
     }
+}
+
+// defining validator functions.
+// Returns true for valid field, and an error message if invalid
+function fieldEmpty(str) {
+    if (str !== "") {
+        return true
+    } else {
+        error_mes = 'Field is required'
+        return error_mes
+    }
+}
+
+function isNumber(str) {
+    if (!isNaN(str)) {
+        return true
+    } else {
+        error_mes = 'Must be a number'
+        return error_mes
+    }
+}
+
+function isThreeNumbers(str) {
+    if (str.length === 3) {
+        return true
+    } else {
+        error_mes = 'Must be 3 numbers'
+        return error_mes
+    }
+
+}
+
+function isBetween(str) {
+    if (str >= 1 && str <= 30) {
+        return true
+    } else {
+        error_mes = 'Must be between 1-30 days'
+        return error_mes
+    }
+}
+
+function isDateInFuture(str) {
+    let today = Date.now()
+    let parkingDate = new Date(str)
+    if (today < parkingDate) {
+        return true;
+    } else {
+        error_mes = 'Date must be in the future'
+        return error_mes;
+    }
+}
+
+function checkCCNumber(str) {
+
+    if (validateCardNumber(str)) {
+        return true
+    } else {
+        error_mes = 'Invalid credit card number'
+        return error_mes
+    }
+}
+
+function validateCardNumber(str) {
+    let number = parseInt(str, 10)
+    var regex = new RegExp("^[0-9]{16}$");
+    if (!regex.test(number))
+        return false;
+
+    return this.luhnCheck(number);
+}
+
+function luhnCheck(val) {
+    var sum = 0;
+    for (var i = 0; i < val.length; i++) {
+        var intVal = parseInt(val.substr(i, 1));
+        if (i % 2 == 0) {
+            intVal *= 2;
+            if (intVal > 9) {
+                intVal = 1 + (intVal % 10);
+            }
+        }
+        sum += intVal;
+    }
+
+    return (sum % 10) == 0;
 }
 
 document.querySelector('#parking-form').addEventListener('submit', function(event) {
     event.preventDefault()
 
-    let nameValue = document.querySelector('#name').value.trim()
 
-    let nameField = new Field(nameValue)
+    let nameField = new Field(document.querySelector('#name'), [fieldEmpty])
+    nameField.validate()
 
-    let daysValue = document.querySelector('#days').value.trim()
+    let daysField = new Field(document.querySelector('#days'), [fieldEmpty, isBetween, isNumber])
+    daysField.validate()
 
-    let daysField = new Field(daysValue)
+    let cvvField = new Field(document.querySelector('#cvv'), [fieldEmpty, isNumber, isThreeNumbers])
+    cvvField.validate()
 
-    let cvvValue = document.querySelector('#cvv').value.trim()
 
-    let cvvField = new Field(cvvValue)
+    let dateInput = document.querySelector('#start-date')
+    let dateField = new Field(dateInput, [isDateInFuture])
+    dateField.validate()
 
-    let dateValue = document.querySelector('#start-date').value.trim()
 
-    let dateField = new Field(dateValue)
+    let carField = new Field(document.querySelector('#car-info'), [fieldEmpty])
+    carField.validate()
 
-    let carValue = document.querySelector('#car-info').value.trim()
+    let ccField = new Field(document.querySelector('#credit-card'), [fieldEmpty, checkCCNumber])
+    ccField.validate()
 
-    let carField = new Field(carValue)
 
-    let ccValue = document.querySelector('#credit-card')
-
-    let ccField = new Field(ccValue)
-
-    let expirationValue = document.querySelector('#expiration')
-
-    let expirationField = new Field(expirationValue)
+    let expirationField = new Field(document.querySelector('#expiration'), [fieldEmpty])
+    expirationField.validate()
 
 
 
-    console.log(nameField.fieldEmpty())
+    // nameField.fieldEmpty()
 
-    daysField.fieldEmpty()
+    // daysField.fieldEmpty()
 
-    daysField.isNumber()
+    // daysField.isNumber()
 
-    cvvField.fieldEmpty()
+    // cvvField.fieldEmpty()
 
-    cvvField.isThreeNumbers()
+    // cvvField.isThreeNumbers()
 
-    cvvField.isNumber()
+    // cvvField.isNumber()
 
-    daysField.isBetween()
+    // daysField.isBetween()
 
-    dateField.isDateInFuture()
+    // dateField.isDateInFuture()
 
-    ccField.validateCardNumber()
+    // ccField.validateCardNumber()
 
-    carField.fieldEmpty()
+    // carField.fieldEmpty()
 
-    expirationField.fieldEmpty()
-
-
-
-
-
+    // console.log(expirationField.fieldEmpty())
 
 
 })
